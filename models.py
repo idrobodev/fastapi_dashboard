@@ -244,6 +244,48 @@ class ApiResponse(BaseModel):
     error: Optional[Dict[str, str]] = None
 
 
+class Usuario(BaseModel):
+    id_usuario: Optional[int] = None
+    email: str = Field(..., min_length=1, max_length=100)
+    rol: str = Field(..., pattern="^(ADMINISTRADOR|CONSULTA)$")
+
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        """Valida formato básico de email"""
+        if '@' not in v or '.' not in v.split('@')[-1]:
+            raise ValueError('Email inválido')
+        return v.lower()
+
+
+class UsuarioCreate(BaseModel):
+    email: str = Field(..., min_length=1, max_length=100)
+    password: str = Field(..., min_length=8, max_length=100)
+    rol: str = Field(default="CONSULTA", pattern="^(ADMINISTRADOR|CONSULTA)$")
+
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        if '@' not in v or '.' not in v.split('@')[-1]:
+            raise ValueError('Email inválido')
+        return v.lower()
+
+
+class UsuarioUpdate(BaseModel):
+    email: Optional[str] = Field(None, min_length=1, max_length=100)
+    password: Optional[str] = Field(None, min_length=8, max_length=100)
+    rol: Optional[str] = Field(None, pattern="^(ADMINISTRADOR|CONSULTA)$")
+
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            if '@' not in v or '.' not in v.split('@')[-1]:
+                raise ValueError('Email inválido')
+            return v.lower()
+        return v
+
+
 class DashboardStats(BaseModel):
     participantes: int
     mensualidades: int

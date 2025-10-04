@@ -6,11 +6,12 @@ from models import (
     Participante, ParticipanteCreate, ParticipanteUpdate,
     Acudiente, AcudienteCreate, AcudienteUpdate,
     Sede, SedeCreate, SedeUpdate,
+    Usuario, UsuarioCreate, UsuarioUpdate,
     Mensualidad, MensualidadCreate, MensualidadUpdate,
     ApiResponse, DashboardStats
 )
 from database import (
-    participantes_db, acudientes_db, sedes_db, mensualidades_db, counters
+    participantes_db, acudientes_db, sedes_db, usuarios_db, mensualidades_db, counters
 )
 from services import (
     validate_sede_exists,
@@ -820,6 +821,142 @@ async def delete_mensualidad(id: int):
         return ApiResponse(
             data=None,
             error={"message": f"Error al eliminar mensualidad: {str(e)}"}
+        )
+
+
+# ============================================================================
+# Endpoints de Usuarios
+# ============================================================================
+
+@app.get("/api/usuarios", response_model=ApiResponse)
+async def get_usuarios():
+    """Obtiene la lista de todos los usuarios"""
+    try:
+        usuarios = list(usuarios_db.values())
+        return ApiResponse(data=usuarios, error=None)
+    except Exception as e:
+        return ApiResponse(
+            data=None,
+            error={"message": f"Error al obtener usuarios: {str(e)}"}
+        )
+
+
+@app.get("/api/usuarios/{id}", response_model=ApiResponse)
+async def get_usuario(id: int):
+    """Obtiene un usuario por ID"""
+    try:
+        if id not in usuarios_db:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuario no encontrado"
+            )
+
+        usuario = usuarios_db[id]
+        return ApiResponse(data=usuario, error=None)
+    except HTTPException:
+        raise
+    except Exception as e:
+        return ApiResponse(
+            data=None,
+            error={"message": f"Error al obtener usuario: {str(e)}"}
+        )
+
+
+@app.post("/api/usuarios", response_model=ApiResponse, status_code=status.HTTP_201_CREATED)
+async def create_usuario(usuario: UsuarioCreate):
+    """Crea un nuevo usuario"""
+    try:
+        # Verificar que el email no exista
+        for existing_usuario in usuarios_db.values():
+            if existing_usuario["email"] == usuario.email:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Ya existe un usuario con el email {usuario.email}"
+                )
+
+        # Generar nuevo ID
+        new_id = counters["usuarios"] + 1
+        counters["usuarios"] = new_id
+
+        # Crear el usuario
+        usuario_dict = usuario.model_dump()
+        usuario_dict["id_usuario"] = new_id
+
+        usuarios_db[new_id] = usuario_dict
+
+        return ApiResponse(data=usuario_dict, error=None)
+    except HTTPException:
+        raise
+    except Exception as e:
+        return ApiResponse(
+            data=None,
+            error={"message": f"Error al crear usuario: {str(e)}"}
+        )
+
+
+@app.put("/api/usuarios/{id}", response_model=ApiResponse)
+async def update_usuario(id: int, usuario_update: UsuarioUpdate):
+    """Actualiza un usuario existente"""
+    try:
+        # Verificar que el usuario exista
+        if id not in usuarios_db:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuario no encontrado"
+            )
+
+        usuario_actual = usuarios_db[id]
+        update_data = usuario_update.model_dump(exclude_unset=True)
+
+        # Verificar email único si se está actualizando
+        if "email" in update_data:
+            for existing_id, existing_usuario in usuarios_db.items():
+                if existing_id != id and existing_usuario["email"] == update_data["email"]:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail=f"Ya existe un usuario con el email {update_data['email']}"
+                    )
+
+        # Actualizar campos
+        for key, value in update_data.items():
+            usuario_actual[key] = value
+
+        usuarios_db[id] = usuario_actual
+
+        return ApiResponse(data=usuario_actual, error=None)
+    except HTTPException:
+        raise
+    except Exception as e:
+        return ApiResponse(
+            data=None,
+            error={"message": f"Error al actualizar usuario: {str(e)}"}
+        )
+
+
+@app.delete("/api/usuarios/{id}", response_model=ApiResponse)
+async def delete_usuario(id: int):
+    """Elimina un usuario"""
+    try:
+        # Verificar que el usuario exista
+        if id not in usuarios_db:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuario no encontrado"
+            )
+
+        # Eliminar usuario
+        deleted_usuario = usuarios_db.pop(id)
+
+        return ApiResponse(
+            data={"message": "Usuario eliminado exitosamente", "id": id},
+            error=None
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        return ApiResponse(
+            data=None,
+            error={"message": f"Error al eliminar usuario: {str(e)}"}
         )
 
 

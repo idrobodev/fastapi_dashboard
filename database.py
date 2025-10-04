@@ -11,7 +11,8 @@ counters = {
     "participantes": 10,
     "acudientes": 8,
     "sedes": 3,
-    "mensualidades": 15
+    "mensualidades": 15,
+    "usuarios": 2
 }
 
 # ============================================================================
@@ -22,6 +23,7 @@ participantes_db = {}
 acudientes_db = {}
 sedes_db = {}
 mensualidades_db = {}
+usuarios_db = {}
 
 # ============================================================================
 # Funciones de inicialización de datos
@@ -301,6 +303,23 @@ def init_acudientes():
     }
 
 
+def init_usuarios():
+    """Inicializa datos de ejemplo para usuarios"""
+    global usuarios_db
+    usuarios_db = {
+        1: {
+            "id_usuario": 1,
+            "email": "admin@example.com",
+            "rol": "ADMINISTRADOR"
+        },
+        2: {
+            "id_usuario": 2,
+            "email": "consulta@example.com",
+            "rol": "CONSULTA"
+        }
+    }
+
+
 def init_mensualidades():
     """Inicializa datos de ejemplo para mensualidades"""
     global mensualidades_db
@@ -493,11 +512,13 @@ def initialize_database():
     init_sedes()
     init_participantes()
     init_acudientes()
+    init_usuarios()
     init_mensualidades()
     print("✅ Base de datos inicializada con datos de ejemplo")
     print(f"   - {len(sedes_db)} sedes")
     print(f"   - {len(participantes_db)} participantes")
     print(f"   - {len(acudientes_db)} acudientes")
+    print(f"   - {len(usuarios_db)} usuarios")
     print(f"   - {len(mensualidades_db)} mensualidades")
 
 
