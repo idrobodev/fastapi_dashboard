@@ -372,7 +372,8 @@ def get_mensualidad_with_relations(id_mensualidad: int) -> Optional[Dict[str, An
     if participant_id in participantes_db:
         participante = participantes_db[participant_id]
         mensualidad["participant_name"] = f"{participante['nombres']} {participante['apellidos']}"
-        
+        mensualidad["participant_documento"] = participante["numero_documento"]
+
         # Agregar información de la sede
         id_sede = participante["id_sede"]
         if id_sede in sedes_db:
@@ -380,16 +381,19 @@ def get_mensualidad_with_relations(id_mensualidad: int) -> Optional[Dict[str, An
             mensualidad["sede_name"] = sedes_db[id_sede]["nombre"]
     else:
         mensualidad["participant_name"] = "N/A"
+        mensualidad["participant_documento"] = "N/A"
         mensualidad["sede_id"] = None
         mensualidad["sede_name"] = "N/A"
-    
+
     # Agregar información del acudiente si existe
     id_acudiente = mensualidad.get("id_acudiente")
     if id_acudiente and id_acudiente in acudientes_db:
         acudiente = acudientes_db[id_acudiente]
         mensualidad["acudiente_name"] = f"{acudiente['nombres']} {acudiente['apellidos']}"
+        mensualidad["acudiente_documento"] = acudiente["numero_documento"]
     else:
         mensualidad["acudiente_name"] = None
+        mensualidad["acudiente_documento"] = None
     
     # Renombrar campos para compatibilidad con frontend
     mensualidad["valor"] = mensualidad["monto"]
