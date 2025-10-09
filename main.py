@@ -22,16 +22,16 @@ def get_db():
     """Obtener sesión de base de datos"""
     return SessionLocal()
 
-@app.get("/api/health")
+@app.get("/health")
 async def health_check():
     """Health check endpoint para verificar que el servidor está funcionando"""
     return {"status": "ok", "message": "API is running"}
 
-@app.get("/api/test")
+@app.get("/test")
 async def test_endpoint():
     return {"test": "ok"}
 
-@app.get("/api/acudientes")
+@app.get("/acudientes")
 async def get_acudientes():
     """Obtiene la lista de todos los acudientes con información de participante"""
     try:
@@ -64,7 +64,7 @@ async def get_acudientes():
     finally:
         db.close()
 
-@app.get("/api/sedes")
+@app.get("/sedes")
 async def get_sedes():
     """Obtiene la lista de todas las sedes"""
     try:
@@ -88,7 +88,7 @@ async def get_sedes():
     finally:
         db.close()
 
-@app.get("/api/usuarios")
+@app.get("/usuarios")
 async def get_usuarios():
     """Obtiene la lista de todos los usuarios"""
     try:
@@ -108,7 +108,7 @@ async def get_usuarios():
     finally:
         db.close()
 
-@app.get("/api/dashboard/stats")
+@app.get("/dashboard/stats")
 async def get_dashboard_stats():
    """Obtiene estadísticas generales del dashboard"""
    try:
@@ -122,7 +122,7 @@ async def get_dashboard_stats():
    finally:
        db.close()
 
-@app.get("/api/participantes")
+@app.get("/participantes")
 async def get_participantes():
    """Obtiene la lista de todos los participantes con información de sede"""
    try:
@@ -156,7 +156,7 @@ async def get_participantes():
    finally:
        db.close()
 
-@app.get("/api/mensualidades")
+@app.get("/mensualidades")
 async def get_mensualidades():
     """Obtiene la lista de todas las mensualidades con información de participantes y acudientes"""
     try:
@@ -201,7 +201,7 @@ async def get_mensualidades():
     finally:
         db.close()
 
-@app.post("/api/mensualidades")
+@app.post("/mensualidades")
 async def create_mensualidad(mensualidad_data: dict):
     """Crea una nueva mensualidad"""
     try:
@@ -241,7 +241,7 @@ async def create_mensualidad(mensualidad_data: dict):
     finally:
         db.close()
 
-@app.put("/api/mensualidades/{mensualidad_id}")
+@app.put("/mensualidades/{mensualidad_id}")
 async def update_mensualidad(mensualidad_id: int, mensualidad_data: dict):
     """Actualiza una mensualidad existente"""
     try:
