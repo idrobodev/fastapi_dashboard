@@ -1,526 +1,316 @@
 """
-Base de datos en memoria para el sistema de dashboard.
-Simula una base de datos usando diccionarios de Python.
+Base de datos PostgreSQL para el sistema de dashboard.
+Usa SQLAlchemy para interactuar con PostgreSQL.
 """
 
-# ============================================================================
-# Contadores para IDs autoincrementales
-# ============================================================================
-
-counters = {
-    "participantes": 10,
-    "acudientes": 8,
-    "sedes": 3,
-    "mensualidades": 15,
-    "usuarios": 2
-}
+from database_models import (
+    db_service, SedeModel, ParticipanteModel, AcudienteModel, UsuarioModel, MensualidadModel
+)
+from sqlalchemy.orm import Session
+from typing import List, Optional, Dict, Any
+from datetime import datetime
 
 # ============================================================================
-# Almacenamiento en memoria
+# Funciones de compatibilidad con la API existente
 # ============================================================================
 
-participantes_db = {}
-acudientes_db = {}
-sedes_db = {}
-mensualidades_db = {}
-usuarios_db = {}
+def get_participante_with_sede(participante_id: int) -> Optional[Dict[str, Any]]:
+    """Obtiene un participante con información de sede"""
+    db = db_service.get_db()
+    try:
+        participante = db.query(ParticipanteModel).filter(ParticipanteModel.id == participante_id).first()
+        if not participante:
+            return None
 
-# ============================================================================
-# Funciones de inicialización de datos
-# ============================================================================
+        sede = db.query(SedeModel).filter(SedeModel.id == participante.id_sede).first()
 
-def init_sedes():
-    """Inicializa datos de ejemplo para sedes"""
-    global sedes_db
-    sedes_db = {
-        1: {
-            "id": 1,
-            "nombre": "Bello Principal",
-            "direccion": "Calle 50 #45-30, Bello, Antioquia",
-            "telefono": "6044567890",
-            "capacidad_maxima": 50,
-            "estado": "Activa",
-            "tipo": "Principal"
-        },
-        2: {
-            "id": 2,
-            "nombre": "Bello Campestre",
-            "direccion": "Carrera 60 #30-15, Bello, Antioquia",
-            "telefono": "6044567891",
-            "capacidad_maxima": 30,
-            "estado": "Activa",
-            "tipo": "Secundaria"
-        },
-        3: {
-            "id": 3,
-            "nombre": "Apartadó",
-            "direccion": "Avenida Principal #20-10, Apartadó, Antioquia",
-            "telefono": "6048281234",
-            "capacidad_maxima": 40,
-            "estado": "Activa",
-            "tipo": "Principal"
+        return {
+            "id": participante.id,
+            "nombres": participante.nombres,
+            "apellidos": participante.apellidos,
+            "tipo_documento": participante.tipo_documento,
+            "numero_documento": participante.numero_documento,
+            "fecha_nacimiento": participante.fecha_nacimiento,
+            "genero": participante.genero,
+            "fecha_ingreso": participante.fecha_ingreso,
+            "estado": participante.estado,
+            "id_sede": participante.id_sede,
+            "telefono": participante.telefono,
+            "sede": {
+                "id": sede.id,
+                "nombre": sede.nombre,
+                "direccion": sede.direccion,
+                "telefono": sede.telefono,
+                "capacidad_maxima": sede.capacidad_maxima,
+                "estado": sede.estado,
+                "tipo": sede.tipo
+            } if sede else None
         }
-    }
+    finally:
+        db.close()
 
 
-def init_participantes():
-    """Inicializa datos de ejemplo para participantes"""
-    global participantes_db
-    participantes_db = {
-        1: {
-            "id": 1,
-            "nombres": "Juan Carlos",
-            "apellidos": "Pérez Gómez",
-            "tipo_documento": "CC",
-            "numero_documento": "1234567890",
-            "fecha_nacimiento": "2010-05-15",
-            "genero": "MASCULINO",
-            "fecha_ingreso": "2023-01-10",
-            "estado": "ACTIVO",
-            "id_sede": 1,
-            "telefono": "3001234567"
-        },
-        2: {
-            "id": 2,
-            "nombres": "María Fernanda",
-            "apellidos": "López Martínez",
-            "tipo_documento": "TI",
-            "numero_documento": "1234567891",
-            "fecha_nacimiento": "2012-08-20",
-            "genero": "FEMENINO",
-            "fecha_ingreso": "2023-02-15",
-            "estado": "ACTIVO",
-            "id_sede": 1,
-            "telefono": "3001234568"
-        },
-        3: {
-            "id": 3,
-            "nombres": "Carlos Andrés",
-            "apellidos": "Rodríguez Silva",
-            "tipo_documento": "CC",
-            "numero_documento": "1234567892",
-            "fecha_nacimiento": "2011-03-10",
-            "genero": "MASCULINO",
-            "fecha_ingreso": "2023-03-20",
-            "estado": "ACTIVO",
-            "id_sede": 2,
-            "telefono": "3001234569"
-        },
-        4: {
-            "id": 4,
-            "nombres": "Ana Sofía",
-            "apellidos": "García Torres",
-            "tipo_documento": "TI",
-            "numero_documento": "1234567893",
-            "fecha_nacimiento": "2013-11-25",
-            "genero": "FEMENINO",
-            "fecha_ingreso": "2023-04-05",
-            "estado": "ACTIVO",
-            "id_sede": 2,
-            "telefono": "3001234570"
-        },
-        5: {
-            "id": 5,
-            "nombres": "Luis Miguel",
-            "apellidos": "Hernández Ruiz",
-            "tipo_documento": "CC",
-            "numero_documento": "1234567894",
-            "fecha_nacimiento": "2010-07-18",
-            "genero": "MASCULINO",
-            "fecha_ingreso": "2023-05-12",
-            "estado": "ACTIVO",
-            "id_sede": 3,
-            "telefono": "3001234571"
-        },
-        6: {
-            "id": 6,
-            "nombres": "Laura Valentina",
-            "apellidos": "Moreno Castro",
-            "tipo_documento": "TI",
-            "numero_documento": "1234567895",
-            "fecha_nacimiento": "2012-09-30",
-            "genero": "FEMENINO",
-            "fecha_ingreso": "2023-06-18",
-            "estado": "ACTIVO",
-            "id_sede": 3,
-            "telefono": "3001234572"
-        },
-        7: {
-            "id": 7,
-            "nombres": "Diego Alejandro",
-            "apellidos": "Ramírez Vargas",
-            "tipo_documento": "CC",
-            "numero_documento": "1234567896",
-            "fecha_nacimiento": "2011-12-05",
-            "genero": "MASCULINO",
-            "fecha_ingreso": "2023-07-22",
-            "estado": "INACTIVO",
-            "id_sede": 1,
-            "telefono": "3001234573"
-        },
-        8: {
-            "id": 8,
-            "nombres": "Camila Andrea",
-            "apellidos": "Sánchez Ortiz",
-            "tipo_documento": "TI",
-            "numero_documento": "1234567897",
-            "fecha_nacimiento": "2013-04-14",
-            "genero": "FEMENINO",
-            "fecha_ingreso": "2023-08-10",
-            "estado": "ACTIVO",
-            "id_sede": 2,
-            "telefono": "3001234574"
-        },
-        9: {
-            "id": 9,
-            "nombres": "Santiago",
-            "apellidos": "Jiménez Parra",
-            "tipo_documento": "CC",
-            "numero_documento": "1234567898",
-            "fecha_nacimiento": "2010-10-22",
-            "genero": "MASCULINO",
-            "fecha_ingreso": "2023-09-15",
-            "estado": "ACTIVO",
-            "id_sede": 3,
-            "telefono": "3001234575"
-        },
-        10: {
-            "id": 10,
-            "nombres": "Isabella",
-            "apellidos": "Cruz Mendoza",
-            "tipo_documento": "TI",
-            "numero_documento": "1234567899",
-            "fecha_nacimiento": "2012-06-08",
-            "genero": "FEMENINO",
-            "fecha_ingreso": "2023-10-20",
-            "estado": "ACTIVO",
-            "id_sede": 1,
-            "telefono": "3001234576"
+def get_acudiente_with_participante(acudiente_id: int) -> Optional[Dict[str, Any]]:
+    """Obtiene un acudiente con información del participante"""
+    db = db_service.get_db()
+    try:
+        acudiente = db.query(AcudienteModel).filter(AcudienteModel.id_acudiente == acudiente_id).first()
+        if not acudiente:
+            return None
+
+        participante = db.query(ParticipanteModel).filter(ParticipanteModel.id == acudiente.id_participante).first()
+
+        return {
+            "id_acudiente": acudiente.id_acudiente,
+            "nombres": acudiente.nombres,
+            "apellidos": acudiente.apellidos,
+            "tipo_documento": acudiente.tipo_documento,
+            "numero_documento": acudiente.numero_documento,
+            "parentesco": acudiente.parentesco,
+            "telefono": acudiente.telefono,
+            "email": acudiente.email,
+            "direccion": acudiente.direccion,
+            "id_participante": acudiente.id_participante,
+            "participante": {
+                "id": participante.id,
+                "nombres": participante.nombres,
+                "apellidos": participante.apellidos
+            } if participante else None
         }
-    }
+    finally:
+        db.close()
 
 
-def init_acudientes():
-    """Inicializa datos de ejemplo para acudientes"""
-    global acudientes_db
-    acudientes_db = {
-        1: {
-            "id_acudiente": 1,
-            "nombres": "Roberto",
-            "apellidos": "Pérez González",
-            "tipo_documento": "CC",
-            "numero_documento": "9876543210",
-            "parentesco": "Padre",
-            "telefono": "3101234567",
-            "email": "roberto.perez@example.com",
-            "direccion": "Calle 45 #30-20, Bello",
-            "id_participante": 1
-        },
-        2: {
-            "id_acudiente": 2,
-            "nombres": "Patricia",
-            "apellidos": "López Ramírez",
-            "tipo_documento": "CC",
-            "numero_documento": "9876543211",
-            "parentesco": "Madre",
-            "telefono": "3101234568",
-            "email": "patricia.lopez@example.com",
-            "direccion": "Carrera 50 #25-15, Bello",
-            "id_participante": 2
-        },
-        3: {
-            "id_acudiente": 3,
-            "nombres": "Jorge",
-            "apellidos": "Rodríguez Pérez",
-            "tipo_documento": "CC",
-            "numero_documento": "9876543212",
-            "parentesco": "Padre",
-            "telefono": "3101234569",
-            "email": "jorge.rodriguez@example.com",
-            "direccion": "Avenida 60 #40-30, Bello",
-            "id_participante": 3
-        },
-        4: {
-            "id_acudiente": 4,
-            "nombres": "Sandra",
-            "apellidos": "García Morales",
-            "tipo_documento": "CC",
-            "numero_documento": "9876543213",
-            "parentesco": "Madre",
-            "telefono": "3101234570",
-            "email": "sandra.garcia@example.com",
-            "direccion": "Calle 55 #35-25, Bello",
-            "id_participante": 4
-        },
-        5: {
-            "id_acudiente": 5,
-            "nombres": "Fernando",
-            "apellidos": "Hernández López",
-            "tipo_documento": "CC",
-            "numero_documento": "9876543214",
-            "parentesco": "Padre",
-            "telefono": "3101234571",
-            "email": "fernando.hernandez@example.com",
-            "direccion": "Carrera 70 #20-10, Apartadó",
-            "id_participante": 5
-        },
-        6: {
-            "id_acudiente": 6,
-            "nombres": "Gloria",
-            "apellidos": "Moreno Díaz",
-            "tipo_documento": "CC",
-            "numero_documento": "9876543215",
-            "parentesco": "Madre",
-            "telefono": "3101234572",
-            "email": "gloria.moreno@example.com",
-            "direccion": "Avenida Principal #15-20, Apartadó",
-            "id_participante": 6
-        },
-        7: {
-            "id_acudiente": 7,
-            "nombres": "Andrés",
-            "apellidos": "Ramírez Castro",
-            "tipo_documento": "CC",
-            "numero_documento": "9876543216",
-            "parentesco": "Tío",
-            "telefono": "3101234573",
-            "email": "andres.ramirez@example.com",
-            "direccion": "Calle 48 #32-18, Bello",
-            "id_participante": 7
-        },
-        8: {
-            "id_acudiente": 8,
-            "nombres": "Claudia",
-            "apellidos": "Sánchez Vargas",
-            "tipo_documento": "CC",
-            "numero_documento": "9876543217",
-            "parentesco": "Madre",
-            "telefono": "3101234574",
-            "email": "claudia.sanchez@example.com",
-            "direccion": "Carrera 65 #28-12, Bello",
-            "id_participante": 8
+def get_mensualidad_with_relations(mensualidad_id: int) -> Optional[Dict[str, Any]]:
+    """Obtiene una mensualidad con datos relacionados"""
+    db = db_service.get_db()
+    try:
+        mensualidad = db.query(MensualidadModel).filter(MensualidadModel.id == mensualidad_id).first()
+        if not mensualidad:
+            return None
+
+        participante = db.query(ParticipanteModel).filter(ParticipanteModel.id == mensualidad.participant_id).first()
+        acudiente = None
+        if mensualidad.id_acudiente:
+            acudiente = db.query(AcudienteModel).filter(AcudienteModel.id_acudiente == mensualidad.id_acudiente).first()
+
+        return {
+            "id": mensualidad.id,
+            "participant_id": mensualidad.participant_id,
+            "id_acudiente": mensualidad.id_acudiente,
+            "mes": mensualidad.mes,
+            "año": mensualidad.año,
+            "monto": mensualidad.monto,
+            "estado": mensualidad.estado,
+            "metodo_pago": mensualidad.metodo_pago,
+            "fecha_pago": mensualidad.fecha_pago,
+            "observaciones": mensualidad.observaciones,
+            "participante": {
+                "id": participante.id,
+                "nombres": participante.nombres,
+                "apellidos": participante.apellidos
+            } if participante else None,
+            "acudiente": {
+                "id_acudiente": acudiente.id_acudiente,
+                "nombres": acudiente.nombres,
+                "apellidos": acudiente.apellidos
+            } if acudiente else None
         }
-    }
+    finally:
+        db.close()
 
 
-def init_usuarios():
-    """Inicializa datos de ejemplo para usuarios"""
-    global usuarios_db
-    usuarios_db = {
-        1: {
-            "id_usuario": 1,
-            "email": "admin@example.com",
-            "rol": "ADMINISTRADOR"
-        },
-        2: {
-            "id_usuario": 2,
-            "email": "consulta@example.com",
-            "rol": "CONSULTA"
+def get_all_mensualidades_with_relations() -> List[Dict[str, Any]]:
+    """Obtiene todas las mensualidades con datos relacionados"""
+    db = db_service.get_db()
+    try:
+        mensualidades = db.query(MensualidadModel).all()
+        result = []
+
+        for mensualidad in mensualidades:
+            participante = db.query(ParticipanteModel).filter(ParticipanteModel.id == mensualidad.participant_id).first()
+            acudiente = None
+            if mensualidad.id_acudiente:
+                acudiente = db.query(AcudienteModel).filter(AcudienteModel.id_acudiente == mensualidad.id_acudiente).first()
+
+            result.append({
+                "id": mensualidad.id,
+                "participant_id": mensualidad.participant_id,
+                "id_acudiente": mensualidad.id_acudiente,
+                "mes": mensualidad.mes,
+                "año": mensualidad.año,
+                "monto": mensualidad.monto,
+                "estado": mensualidad.estado,
+                "metodo_pago": mensualidad.metodo_pago,
+                "fecha_pago": mensualidad.fecha_pago,
+                "observaciones": mensualidad.observaciones,
+                "participante": {
+                    "id": participante.id,
+                    "nombres": participante.nombres,
+                    "apellidos": participante.apellidos
+                } if participante else None,
+                "acudiente": {
+                    "id_acudiente": acudiente.id_acudiente,
+                    "nombres": acudiente.nombres,
+                    "apellidos": acudiente.apellidos
+                } if acudiente else None
+            })
+
+        return result
+    finally:
+        db.close()
+
+
+# ============================================================================
+# Funciones de validación
+# ============================================================================
+
+def validate_sede_exists(sede_id: int) -> bool:
+    """Valida que una sede exista"""
+    db = db_service.get_db()
+    try:
+        return db.query(SedeModel).filter(SedeModel.id == sede_id).first() is not None
+    finally:
+        db.close()
+
+
+def validate_participante_exists(participante_id: int) -> bool:
+    """Valida que un participante exista"""
+    db = db_service.get_db()
+    try:
+        return db.query(ParticipanteModel).filter(ParticipanteModel.id == participante_id).first() is not None
+    finally:
+        db.close()
+
+
+def validate_acudiente_exists(acudiente_id: int) -> bool:
+    """Valida que un acudiente exista"""
+    db = db_service.get_db()
+    try:
+        return db.query(AcudienteModel).filter(AcudienteModel.id_acudiente == acudiente_id).first() is not None
+    finally:
+        db.close()
+
+
+def validate_documento_unico_participante(documento: str, exclude_id: Optional[int] = None) -> bool:
+    """Valida que el documento de participante sea único"""
+    db = db_service.get_db()
+    try:
+        query = db.query(ParticipanteModel).filter(ParticipanteModel.numero_documento == documento)
+        if exclude_id:
+            query = query.filter(ParticipanteModel.id != exclude_id)
+        return query.first() is None
+    finally:
+        db.close()
+
+
+def validate_documento_unico_acudiente(documento: str, exclude_id: Optional[int] = None) -> bool:
+    """Valida que el documento de acudiente sea único"""
+    db = db_service.get_db()
+    try:
+        query = db.query(AcudienteModel).filter(AcudienteModel.numero_documento == documento)
+        if exclude_id:
+            query = query.filter(AcudienteModel.id_acudiente != exclude_id)
+        return query.first() is None
+    finally:
+        db.close()
+
+
+def validate_nombre_sede_unico(nombre: str, exclude_id: Optional[int] = None) -> bool:
+    """Valida que el nombre de sede sea único"""
+    db = db_service.get_db()
+    try:
+        query = db.query(SedeModel).filter(SedeModel.nombre == nombre)
+        if exclude_id:
+            query = query.filter(SedeModel.id != exclude_id)
+        return query.first() is None
+    finally:
+        db.close()
+
+
+def validate_mensualidad_unica(participant_id: int, mes: int, año: int, exclude_id: Optional[int] = None) -> bool:
+    """Valida que no exista otra mensualidad para el mismo participante, mes y año"""
+    db = db_service.get_db()
+    try:
+        query = db.query(MensualidadModel).filter(
+            MensualidadModel.participant_id == participant_id,
+            MensualidadModel.mes == mes,
+            MensualidadModel.año == año
+        )
+        if exclude_id:
+            query = query.filter(MensualidadModel.id != exclude_id)
+        return query.first() is None
+    finally:
+        db.close()
+
+
+def validate_acudiente_belongs_to_participante(acudiente_id: int, participante_id: int) -> bool:
+    """Valida que el acudiente pertenezca al participante"""
+    db = db_service.get_db()
+    try:
+        acudiente = db.query(AcudienteModel).filter(
+            AcudienteModel.id_acudiente == acudiente_id,
+            AcudienteModel.id_participante == participante_id
+        ).first()
+        return acudiente is not None
+    finally:
+        db.close()
+
+
+def check_participante_has_dependencies(participante_id: int) -> Dict[str, Any]:
+    """Verifica si un participante tiene dependencias"""
+    db = db_service.get_db()
+    try:
+        acudientes_count = db.query(AcudienteModel).filter(AcudienteModel.id_participante == participante_id).count()
+        mensualidades_count = db.query(MensualidadModel).filter(MensualidadModel.participant_id == participante_id).count()
+
+        return {
+            "has_dependencies": acudientes_count > 0 or mensualidades_count > 0,
+            "details": {
+                "acudientes": acudientes_count,
+                "mensualidades": mensualidades_count
+            }
         }
-    }
+    finally:
+        db.close()
 
 
-def init_mensualidades():
-    """Inicializa datos de ejemplo para mensualidades"""
-    global mensualidades_db
-    mensualidades_db = {
-        1: {
-            "id": 1,
-            "participant_id": 1,
-            "id_acudiente": 1,
-            "mes": 1,
-            "año": 2024,
-            "monto": 50000.0,
-            "estado": "PAGADA",
-            "metodo_pago": "TRANSFERENCIA",
-            "fecha_pago": "2024-01-05",
-            "observaciones": "Pago puntual"
-        },
-        2: {
-            "id": 2,
-            "participant_id": 1,
-            "id_acudiente": 1,
-            "mes": 2,
-            "año": 2024,
-            "monto": 50000.0,
-            "estado": "PAGADA",
-            "metodo_pago": "EFECTIVO",
-            "fecha_pago": "2024-02-03",
-            "observaciones": None
-        },
-        3: {
-            "id": 3,
-            "participant_id": 2,
-            "id_acudiente": 2,
-            "mes": 1,
-            "año": 2024,
-            "monto": 50000.0,
-            "estado": "PAGADA",
-            "metodo_pago": "TRANSFERENCIA",
-            "fecha_pago": "2024-01-08",
-            "observaciones": None
-        },
-        4: {
-            "id": 4,
-            "participant_id": 2,
-            "id_acudiente": 2,
-            "mes": 2,
-            "año": 2024,
-            "monto": 50000.0,
-            "estado": "PENDIENTE",
-            "metodo_pago": "TRANSFERENCIA",
-            "fecha_pago": None,
-            "observaciones": "Pendiente de pago"
-        },
-        5: {
-            "id": 5,
-            "participant_id": 3,
-            "id_acudiente": 3,
-            "mes": 1,
-            "año": 2024,
-            "monto": 45000.0,
-            "estado": "PAGADA",
-            "metodo_pago": "EFECTIVO",
-            "fecha_pago": "2024-01-10",
-            "observaciones": None
-        },
-        6: {
-            "id": 6,
-            "participant_id": 4,
-            "id_acudiente": 4,
-            "mes": 1,
-            "año": 2024,
-            "monto": 50000.0,
-            "estado": "PAGADA",
-            "metodo_pago": "TRANSFERENCIA",
-            "fecha_pago": "2024-01-12",
-            "observaciones": None
-        },
-        7: {
-            "id": 7,
-            "participant_id": 5,
-            "id_acudiente": 5,
-            "mes": 1,
-            "año": 2024,
-            "monto": 55000.0,
-            "estado": "PAGADA",
-            "metodo_pago": "TRANSFERENCIA",
-            "fecha_pago": "2024-01-15",
-            "observaciones": None
-        },
-        8: {
-            "id": 8,
-            "participant_id": 5,
-            "id_acudiente": 5,
-            "mes": 2,
-            "año": 2024,
-            "monto": 55000.0,
-            "estado": "PENDIENTE",
-            "metodo_pago": "TRANSFERENCIA",
-            "fecha_pago": None,
-            "observaciones": None
-        },
-        9: {
-            "id": 9,
-            "participant_id": 6,
-            "id_acudiente": 6,
-            "mes": 1,
-            "año": 2024,
-            "monto": 50000.0,
-            "estado": "PAGADA",
-            "metodo_pago": "EFECTIVO",
-            "fecha_pago": "2024-01-18",
-            "observaciones": None
-        },
-        10: {
-            "id": 10,
-            "participant_id": 8,
-            "id_acudiente": 8,
-            "mes": 1,
-            "año": 2024,
-            "monto": 50000.0,
-            "estado": "PAGADA",
-            "metodo_pago": "TRANSFERENCIA",
-            "fecha_pago": "2024-01-20",
-            "observaciones": None
-        },
-        11: {
-            "id": 11,
-            "participant_id": 9,
-            "id_acudiente": None,
-            "mes": 1,
-            "año": 2024,
-            "monto": 50000.0,
-            "estado": "PAGADA",
-            "metodo_pago": "EFECTIVO",
-            "fecha_pago": "2024-01-22",
-            "observaciones": "Pago directo"
-        },
-        12: {
-            "id": 12,
-            "participant_id": 10,
-            "id_acudiente": None,
-            "mes": 1,
-            "año": 2024,
-            "monto": 50000.0,
-            "estado": "PENDIENTE",
-            "metodo_pago": "TRANSFERENCIA",
-            "fecha_pago": None,
-            "observaciones": None
-        },
-        13: {
-            "id": 13,
-            "participant_id": 3,
-            "id_acudiente": 3,
-            "mes": 2,
-            "año": 2024,
-            "monto": 45000.0,
-            "estado": "PENDIENTE",
-            "metodo_pago": "EFECTIVO",
-            "fecha_pago": None,
-            "observaciones": None
-        },
-        14: {
-            "id": 14,
-            "participant_id": 4,
-            "id_acudiente": 4,
-            "mes": 2,
-            "año": 2024,
-            "monto": 50000.0,
-            "estado": "PENDIENTE",
-            "metodo_pago": "TRANSFERENCIA",
-            "fecha_pago": None,
-            "observaciones": None
-        },
-        15: {
-            "id": 15,
-            "participant_id": 6,
-            "id_acudiente": 6,
-            "mes": 2,
-            "año": 2024,
-            "monto": 50000.0,
-            "estado": "PAGADA",
-            "metodo_pago": "EFECTIVO",
-            "fecha_pago": "2024-02-18",
-            "observaciones": None
+def check_acudiente_has_mensualidades(acudiente_id: int) -> Dict[str, Any]:
+    """Verifica si un acudiente tiene mensualidades asociadas"""
+    db = db_service.get_db()
+    try:
+        mensualidades_count = db.query(MensualidadModel).filter(MensualidadModel.id_acudiente == acudiente_id).count()
+
+        return {
+            "has_dependencies": mensualidades_count > 0,
+            "details": {
+                "mensualidades": mensualidades_count
+            }
         }
-    }
+    finally:
+        db.close()
 
+
+def check_sede_has_participantes(sede_id: int) -> Dict[str, Any]:
+    """Verifica si una sede tiene participantes asociados"""
+    db = db_service.get_db()
+    try:
+        participantes_count = db.query(ParticipanteModel).filter(ParticipanteModel.id_sede == sede_id).count()
+
+        return {
+            "has_dependencies": participantes_count > 0,
+            "details": {
+                "participantes": participantes_count
+            }
+        }
+    finally:
+        db.close()
+
+
+# ============================================================================
+# Funciones de inicialización (legacy compatibility)
+# ============================================================================
 
 def initialize_database():
-    """Inicializa toda la base de datos con datos de ejemplo"""
-    init_sedes()
-    init_participantes()
-    init_acudientes()
-    init_usuarios()
-    init_mensualidades()
-    print("✅ Base de datos inicializada con datos de ejemplo")
-    print(f"   - {len(sedes_db)} sedes")
-    print(f"   - {len(participantes_db)} participantes")
-    print(f"   - {len(acudientes_db)} acudientes")
-    print(f"   - {len(usuarios_db)} usuarios")
-    print(f"   - {len(mensualidades_db)} mensualidades")
-
-
-# Inicializar la base de datos al importar el módulo
-initialize_database()
+    """Función de compatibilidad - la inicialización se hace en database_models.py"""
+    pass
