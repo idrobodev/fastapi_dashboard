@@ -123,10 +123,6 @@ class MensualidadModel(Base):
     )
 
 
-# Crear las tablas (solo en desarrollo local)
-if os.getenv("ENVIRONMENT") != "production":
-    Base.metadata.create_all(bind=engine)
-
 # ============================================================================
 # Servicio de Base de Datos
 # ============================================================================
@@ -135,7 +131,10 @@ class DatabaseService:
     """Servicio de base de datos usando SQLAlchemy"""
 
     def __init__(self):
-        self.initialize_default_data()
+        # Solo inicializar datos en desarrollo local
+        if os.getenv("ENVIRONMENT") != "production":
+            Base.metadata.create_all(bind=engine)
+            self.initialize_default_data()
 
     def get_db(self) -> Session:
         """Obtener sesión de base de datos"""
