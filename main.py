@@ -24,6 +24,11 @@ def get_db():
     """Obtener sesión de base de datos"""
     return SessionLocal()
 
+@app.get("/")
+async def root():
+    """Root endpoint para el dashboard"""
+    return {"message": "Dashboard API", "status": "running"}
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint para verificar que el servidor está funcionando"""
