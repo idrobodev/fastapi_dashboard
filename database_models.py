@@ -202,5 +202,12 @@ class DatabaseService:
         finally:
             db.close()
 
-# Instancia global del servicio de base de datos
-db_service = DatabaseService()
+# Instancia global del servicio de base de datos (lazy initialization)
+db_service = None
+
+def get_db_service():
+    """Obtener instancia del servicio de base de datos (lazy initialization)"""
+    global db_service
+    if db_service is None:
+        db_service = DatabaseService()
+    return db_service
