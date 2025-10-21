@@ -123,8 +123,9 @@ class MensualidadModel(Base):
     )
 
 
-# Crear las tablas
-Base.metadata.create_all(bind=engine)
+# Crear las tablas (solo en desarrollo local)
+if os.getenv("ENVIRONMENT") != "production":
+    Base.metadata.create_all(bind=engine)
 
 # ============================================================================
 # Servicio de Base de Datos
