@@ -1,8 +1,13 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import os
+import logging
 from database_models import db_service, SedeModel, ParticipanteModel, AcudienteModel, UsuarioModel, MensualidadModel, SessionLocal
 from sqlalchemy.orm import Session
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Dashboard API - Corporación Todo por un Alma",
@@ -11,7 +16,8 @@ app = FastAPI(
 )
 
 # Configurar CORS
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "https://todoporunalma.org").split(",")
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "https://todoporunalma.org,https://www.todoporunalma.org").split(",")
+logger.info(f"CORS allowed origins: {allowed_origins}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[origin.strip() for origin in allowed_origins],
@@ -130,8 +136,10 @@ async def get_dashboard_stats():
        db.close()
 
 @app.get("/participantes")
-async def get_participantes():
+async def get_participantes(request: Request):
    """Obtiene la lista de todos los participantes con información de sede"""
+   logger.info(f"Request to /participantes from origin: {request.headers.get('origin')}")
+   logger.info(f"Request headers: {dict(request.headers)}")
    try:
        db = get_db()
        participantes = db.query(ParticipanteModel).all()
@@ -159,7 +167,11 @@ async def get_participantes():
            }
            result.append(participante_data)
 
+       logger.info(f"Returning {len(result)} participantes")
        return {"data": result, "error": None}
+   except Exception as e:
+       logger.error(f"Error in get_participantes: {str(e)}")
+       raise
    finally:
        db.close()
 
